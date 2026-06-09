@@ -1,0 +1,62 @@
+service: vision-moderation
+
+slos:
+  - name: availability
+    description: >
+      Percentage of valid requests that receive a successful response.
+      Counts HTTP 2xx and 3xx responses as good events.
+      Counts HTTP 5xx responses, timeouts, and dropped requests as bad events.
+      Client-side errors (4xx) are excluded because they are not service failures.
+    sli: |
+      good_events = count(http_status in [200-399])
+      total_events = count(all_requests excluding 4xx)
+      availability = good_events / total_events
+    objective: 0.999
+    rolling_window: 30d
+    external_sla: 0.995
+    rationale: >
+      Internal SLO (99.9%) is stricter than the partner SLA (99.5%)
+      to provide an error-budget buffer and reduce refund risk.
+    burn_rate_alerts:
+      - severity: page
+        burn_rate: 14.4
+        window: 1h
+      - severity: ticket
+        burn_rate: 6
+        window: 6h
+
+  - name: latency_p95
+    description: >
+      Percentage of requests whose end-to-end latency remains below
+      the 250 ms p95 target for the synchronous API.
+    sli: |
+      good_events = count(request_latency_ms < 250)
+      total_events = count(all_requests)
+      latency_p95_compliance = good_events / total_events
+    objective: 0.95
+    rolling_window: 30d
+    burn_rate_alerts:
+      - severity: page
+        burn_rate: 10
+        window: 1h
+      - severity: ticket
+        burn_rate: 4
+        window: 6h
+
+  - name: latency_p99
+    description: >
+      Percentage of requests whose end-to-end latency remains below
+      the partner refund threshold of 500 ms.
+    sli: |
+      good_events = count(request_latency_ms < 500)
+      total_events = count(all_requests)
+      latency_p99_compliance = good_events / total_events
+    objective: 0.99
+    rolling_window: 30d
+    burn_rate_alerts:
+      - severity: page
+        burn_rate: 14.4
+        window: 1h
+      - severity: ticket
+        burn_rate: 6
+        window: 6h
